@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.5
+    container_name: vybes-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: vybes
+      POSTGRES_USER: vybes_user
+      POSTGRES_PASSWORD: vybes_password_strong_change_me
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vybes_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: vybes-redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  gateway:
+    build: ./gateway
+    container_name: vybes-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DB_URL=postgres://vybes_user:vybes_password_strong_change_me@postgres:5432/vybes
+      - JWT_SECRET=super_secret_change_in_prod
+
+  # Gli altri servizi li aggiungeremo man mano
+
+volumes:
+  postgres_data:
